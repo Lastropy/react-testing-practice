@@ -6,7 +6,7 @@ describe('Greet', () => {
         // Renders our Component in the virtual dom (JSDOM)
         render(<Greet name="Shivam" />);
         // See the rendered component on the vitest-ui
-        screen.debug();
+        // screen.debug();
         // Grab a portion of the rendered component
         const heading = screen.getByRole('heading');
         // Assertion matchers => jest-dom
