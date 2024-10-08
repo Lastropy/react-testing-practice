@@ -27,6 +27,7 @@ describe("ProductDetail", () => {
 	});
 
 	it("should render Error if parsing error on response from backend", async () => {
+		server.use(http.get("/product/999", () => HttpResponse.error()));
 		render(<ProductDetail productId={0} />);
 		const error = await screen.findByText(/error/i);
 		expect(error).toBeInTheDocument();
