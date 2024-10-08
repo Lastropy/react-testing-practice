@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitForElementToBeRemoved } from "@testing-library/react";
 import ProductList from "../../src/components/ProductList";
 import { server } from "../mocks/server";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { db } from "../mocks/db";
 
 describe("ProductList", () => {
@@ -46,5 +46,33 @@ describe("ProductList", () => {
 		render(<ProductList />);
 		const error = await screen.findByText(/error/i);
 		expect(error).toBeInTheDocument();
+	});
+
+	it("should show loading indicator when data is being fetched", async () => {
+		server.use(
+			http.get("/products", async () => {
+				await delay();
+				return HttpResponse.json([]);
+			})
+		);
+
+		render(<ProductList />);
+		const loadingIndicator = await screen.findByText(/loading/i);
+		expect(loadingIndicator).toBeInTheDocument();
+	});
+
+	it("should remove loading indicator when data is fetched", async () => {
+		render(<ProductList />);
+		await waitForElementToBeRemoved(() => screen.queryByText(/loading/i));
+	});
+
+	it("should remove loading indicator when data fetching fails", async () => {
+		server.use(
+			http.get("/products", () => {
+				return HttpResponse.error();
+			})
+		);
+		render(<ProductList />);
+		await waitForElementToBeRemoved(() => screen.queryByText(/loading/i));
 	});
 });
