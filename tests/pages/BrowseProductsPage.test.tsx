@@ -11,41 +11,21 @@ describe("BrowseProducts", () => {
 	const products = [] as Product[];
 	const categories = [] as Category[];
 	beforeAll(() => {
-		db.product.deleteMany({ where: { id: { in: db.product.getAll().map((ele) => ele.id) } } });
-		db.category.deleteMany({ where: { id: { in: db.category.getAll().map((ele) => ele.id) } } });
-		for (let i = 0; i < 5; i += 1) {
-			const product = db.product.create({ name: `Product ${i + 1}` });
-			products.push(product);
-			if (db.category.findFirst({ where: { id: { equals: product.categoryId } } }) === null) {
-				categories.push(
-					db.category.create({ id: product.categoryId, name: `Category ${i + 1}` })
-				);
-			}
-		}
+		db.product.deleteMany({ where: { id: { in: db.product.getAll().map((p) => p.id) } } });
+		db.category.deleteMany({ where: { id: { in: db.category.getAll().map((c) => c.id) } } });
+		[1, 2].forEach((item) => {
+			const category = db.category.create({ name: "Category " + item });
+			categories.push(category);
+			[1, 2].forEach(() => {
+				products.push(db.product.create({ categoryId: category.id }));
+			});
+		});
 	});
 
 	afterAll(() => {
-		db.product.deleteMany({ where: { id: { in: products.map((p) => p.id) } } });
-		db.category.deleteMany({ where: { id: { in: categories.map((c) => c.id) } } });
+		db.product.deleteMany({ where: { id: { in: db.product.getAll().map((p) => p.id) } } });
+		db.category.deleteMany({ where: { id: { in: db.category.getAll().map((c) => c.id) } } });
 	});
-
-	const renderComponent = () => {
-		render(
-			<Theme>
-				<CartProvider>
-					<BrowseProducts />
-				</CartProvider>
-			</Theme>
-		);
-
-		return {
-			getProductsLoadingBar: () =>
-				screen.queryByRole("progressbar", { name: "loading products" }),
-			getCategoriesLoadingBar: () =>
-				screen.queryByRole("progressbar", { name: "loading categories" }),
-			getCategoriesDropdown: () => screen.queryByRole("combobox"),
-		};
-	};
 
 	it("should show loading indicator when categories data is loading", () => {
 		simulateDelay("/categories");
@@ -117,4 +97,61 @@ describe("BrowseProducts", () => {
 			expect(screen.getByText(new RegExp("" + product.price))).toBeInTheDocument();
 		});
 	});
+
+	it("should render only products of that category which is selected", async () => {
+		const { selectOptionFromCategoriesDropdown } = renderComponent();
+		for (let j = 0; j < categories.length; j += 1) {
+			const category = categories[j];
+			await selectOptionFromCategoriesDropdown(new RegExp(category.name, "i"));
+			for (let i = 0; i < products.length; i += 1) {
+				const product = products[i];
+				const productOption = screen.queryByText(product.name);
+				if (product.categoryId === category.id) expect(productOption).toBeInTheDocument();
+				else expect(productOption).not.toBeInTheDocument();
+			}
+		}
+	});
+
+	it("should render all products if all option is selected", async () => {
+		const { selectOptionFromCategoriesDropdown } = renderComponent();
+		await selectOptionFromCategoriesDropdown(/all/i);
+		for (let i = 0; i < products.length; i += 1) {
+			const product = products[i];
+			const productOption = screen.queryByText(product.name);
+			expect(productOption).toBeInTheDocument();
+		}
+	});
+
+	const renderComponent = () => {
+		render(
+			<Theme>
+				<CartProvider>
+					<BrowseProducts />
+				</CartProvider>
+			</Theme>
+		);
+
+		const getProductsLoadingBar = () =>
+			screen.queryByRole("progressbar", { name: "loading products" });
+
+		const getCategoriesLoadingBar = () =>
+			screen.queryByRole("progressbar", { name: "loading categories" });
+		const getCategoriesDropdown = () => screen.queryByRole("combobox");
+
+		const selectOptionFromCategoriesDropdown = async (categoryName: RegExp) => {
+			if (getCategoriesLoadingBar()) await waitForElementToBeRemoved(getCategoriesLoadingBar);
+			const categoriesDropdownButton = getCategoriesDropdown()!;
+			const user = userEvent.setup();
+			await user.click(categoriesDropdownButton);
+			const categoryOption = await screen.findByRole("option", { name: categoryName });
+			await user.click(categoryOption);
+		};
+
+		return {
+			getProductsLoadingBar,
+			getCategoriesLoadingBar,
+			getCategoriesDropdown,
+			selectOptionFromCategoriesDropdown,
+		};
+	};
 });
