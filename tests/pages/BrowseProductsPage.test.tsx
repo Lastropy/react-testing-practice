@@ -61,7 +61,8 @@ describe("BrowseProducts", () => {
 
 	it("should show Error indicator when products data fetch fails", async () => {
 		simulateDataFetchingFail("/products");
-		renderComponent();
+		const { getProductsLoadingBar } = renderComponent();
+		await waitForElementToBeRemoved(getProductsLoadingBar);
 		const err = await screen.findByText(/error/i);
 		expect(err).toBeInTheDocument();
 	});
