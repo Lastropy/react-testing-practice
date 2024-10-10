@@ -1,11 +1,12 @@
 import { render, screen, waitForElementToBeRemoved } from "@testing-library/react";
 import BrowseProducts from "../../src/pages/BrowseProductsPage";
-import { Theme } from "@radix-ui/themes";
 import { db } from "../mocks/db";
-import { CartProvider } from "../../src/providers/CartProvider";
 import userEvent from "@testing-library/user-event";
 import { Category, Product } from "../../src/entities";
 import { simulateDataFetchingFail, simulateDelay } from "../utils";
+import AllProviders from "../AllProviders";
+
+vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("BrowseProducts", () => {
 	const products = [] as Product[];
@@ -124,13 +125,7 @@ describe("BrowseProducts", () => {
 	});
 
 	const renderComponent = () => {
-		render(
-			<Theme>
-				<CartProvider>
-					<BrowseProducts />
-				</CartProvider>
-			</Theme>
-		);
+		render(<BrowseProducts />, { wrapper: AllProviders });
 
 		const getProductsLoadingBar = () =>
 			screen.queryByRole("progressbar", { name: "loading products" });
